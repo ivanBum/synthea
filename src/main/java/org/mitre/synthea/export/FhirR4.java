@@ -1,5 +1,9 @@
 package org.mitre.synthea.export;
 
+// Duration to set length of stay
+import org.hl7.fhir.r4.model.Duration;
+import java.util.concurrent.TimeUnit;
+
 import ca.uhn.fhir.context.FhirContext;
 
 import com.google.common.collect.HashBasedTable;
@@ -19,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.hl7.fhir.dstu3.model.codesystems.EncounterDischargeDisposition;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.AllergyIntolerance.AllergyIntoleranceCategory;
@@ -737,10 +742,41 @@ public class FhirR4 {
     classCode.setCode(EncounterType.fromString(encounter.type).code());
     classCode.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
     encounterResource.setClass_(classCode);
+    
     encounterResource
         .setPeriod(new Period()
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
+
+    /* Length of Stay
+
+    Encounter class has both setPeriod and setLength. The first one (which is being implemented up here) sets the
+    start and end date of the encounter. It is easy to implement because setStart and setEnd (from the period class)
+    recieve a Date object.
+    On the other hand, setLength recieves a Duration object. 
+
+    } 
+    */
+    Duration length_of_stay = new Duration();
+    // setValue gets inhereted from Quantity class
+    
+    Date date_start = new Date(encounter.start);
+    Date date_stop = new Date(encounter.stop);
+    long diff = date_stop.getTime() - date_start.getTime();//as given
+
+    // long seconds = TimeUnit.MILLISECONDS.toSeconds(diff);
+    long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+
+    // Set information in the Duration object
+    length_of_stay.setCode("m")
+                  .setSystem("http://unitsofmeasure.org")
+                  .setValue(minutes);
+    
+    // Once the Duration object is constructed and defined, create and extension and add this information
+    String url = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/length-of-stay";
+    Extension lengthOfStay = new Extension(url);
+    lengthOfStay.setValue(length_of_stay);
+    encounterResource.addExtension(lengthOfStay);
 
     if (encounter.reason != null) {
       encounterResource.addReasonCode().addCoding().setCode(encounter.reason.code)
