@@ -1,5 +1,8 @@
 package org.mitre.synthea.export;
 
+// Add chargeItem resource
+import org.hl7.fhir.r4.model.ChargeItem;
+
 import ca.uhn.fhir.context.FhirContext;
 
 import com.google.common.collect.HashBasedTable;
