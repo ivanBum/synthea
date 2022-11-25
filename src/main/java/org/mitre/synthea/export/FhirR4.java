@@ -273,7 +273,7 @@ public class FhirR4 {
 
       // Add ChargeItem to HealthRecord 
       
-      for (HealthRecord.Entry chargeItem : encounter.chargeItem) {
+      for (HealthRecord.Entry chargeItem : person.record.encounters) {
         chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
       }
       
