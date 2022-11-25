@@ -4,6 +4,7 @@ package org.mitre.synthea.export;
 import org.hl7.fhir.r4.model.ChargeItem;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.gclient.ReferenceClientParam;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -270,6 +271,12 @@ public class FhirR4 {
     for (Encounter encounter : person.record.encounters) {
       BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
 
+      // Add ChargeItem to HealthRecord 
+      
+      for (HealthRecord.Entry chargeItem : encounter.chargeItem) {
+        chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
+      }
+      
       for (HealthRecord.Entry condition : encounter.conditions) {
         condition(person, personEntry, bundle, encounterEntry, condition);
       }
@@ -1446,6 +1453,44 @@ public class FhirR4 {
         .setAmount(payment));
 
     return newEntry(person, bundle,eob);
+  }
+
+  /**
+   * Map the ChargeItem into a FHIR ChargeItem resource, and add it to the given Bundle.
+   *
+   * @param rand           Source of randomness to use when generating ids etc
+   * @param personEntry    The Entry for the Person
+   * @param bundle         The Bundle to add to
+   * @param encounterEntry The current Encounter entry
+   * @param chargeItem     The ChargeItem
+   * @return The added Entry
+   */
+  private static BundleEntryComponent chargeItem(RandomNumberGenerator rand,
+          BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
+          HealthRecord.Entry chargeItem) {
+    ChargeItem chargeItemResource = new ChargeItem();
+
+    if (USE_US_CORE_IG) {
+      // The metadata about a resource. This is content in the resource that is maintained by the infrastructure. 
+      // Changes to the content might not always be associated with version changes to the resource.
+      Meta meta = new Meta();
+      meta.addProfile(
+          "http://hl7.org/fhir/us/core/StructureDefinition/us-core-chargeItem");
+      chargeItemResource.setMeta(meta);
+    } 
+
+    chargeItemResource.setSubject(new Reference(personEntry.getFullUrl()));
+
+    Code code = chargeItem.codes.get(0);
+    chargeItemResource.setCode(mapCodeToCodeableConcept(code, SNOMED_URI));
+
+    chargeItemResource.setContext(new Reference(encounterEntry.getId()));
+
+    BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
+
+    chargeItem.fullUrl = chargeItemEntry.getFullUrl();
+
+    return chargeItemEntry;
   }
 
   /**

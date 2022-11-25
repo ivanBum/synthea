@@ -1,5 +1,8 @@
 package org.mitre.synthea.world.concepts;
 
+// Add chargeItem resource
+import org.hl7.fhir.r4.model.ChargeItem;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -587,6 +590,7 @@ public class HealthRecord implements Serializable {
   }
 
   public class Encounter extends Entry {
+    public List<ChargeItem> chargeItem;
     public List<Observation> observations;
     public List<Report> reports;
     public List<Entry> conditions;
