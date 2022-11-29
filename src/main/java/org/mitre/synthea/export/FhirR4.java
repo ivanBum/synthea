@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemBillingcodes;
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemStatus;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.AllergyIntolerance.AllergyIntoleranceCategory;
@@ -42,6 +44,7 @@ import org.hl7.fhir.r4.model.CarePlan.CarePlanStatus;
 import org.hl7.fhir.r4.model.CareTeam;
 import org.hl7.fhir.r4.model.CareTeam.CareTeamParticipantComponent;
 import org.hl7.fhir.r4.model.CareTeam.CareTeamStatus;
+import org.hl7.fhir.r4.model.ChargeItem.ChargeItemStatus;
 import org.hl7.fhir.r4.model.Claim.ClaimStatus;
 import org.hl7.fhir.r4.model.Claim.DiagnosisComponent;
 import org.hl7.fhir.r4.model.Claim.InsuranceComponent;
@@ -1478,13 +1481,17 @@ public class FhirR4 {
           "http://hl7.org/fhir/us/core/StructureDefinition/us-core-chargeItem");
       chargeItemResource.setMeta(meta);
     } 
+    chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
-    chargeItemResource.setSubject(new Reference(personEntry.getFullUrl()));
+    System.err.println(personEntry.getId());
 
-    Code code = chargeItem.codes.get(0);
-    chargeItemResource.setCode(mapCodeToCodeableConcept(code, SNOMED_URI));
+    chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getId()));
 
-    chargeItemResource.setContext(new Reference(encounterEntry.getId()));
+    chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getId()));
+
+    // chargeItemResource.addCategory(new CodeableConcept().addCoding(new Coding(
+    //       "http://standardhealthrecord.org/shr/condition/vs/ConditionCategoryVS", "disease",
+    //       "Disease")));
 
     BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
 
