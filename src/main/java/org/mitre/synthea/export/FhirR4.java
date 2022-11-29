@@ -1,16 +1,18 @@
 package org.mitre.synthea.export;
 
 // Duration to set length of stay
-import org.hl7.fhir.r4.model.Duration;
 import java.util.concurrent.TimeUnit;
+import org.hl7.fhir.r4.model.Duration;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.model.dstu2.valueset.EncounterStateEnum;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.oracle.truffle.js.runtime.objects.Null;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -748,35 +750,39 @@ public class FhirR4 {
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
 
-    /* Length of Stay
-
-    Encounter class has both setPeriod and setLength. The first one (which is being implemented up here) sets the
-    start and end date of the encounter. It is easy to implement because setStart and setEnd (from the period class)
-    recieve a Date object.
-    On the other hand, setLength recieves a Duration object. 
-
-    } 
-    */
+    // Length of Stay 
     Duration length_of_stay = new Duration();
     // setValue gets inhereted from Quantity class
     
-    Date date_start = new Date(encounter.start);
-    Date date_stop = new Date(encounter.stop);
-    long diff = date_stop.getTime() - date_start.getTime();//as given
+    // Check if encounter.start or encounter.stop are null, and if encounter is finished
+    EncounterStatus status = encounterResource.getStatus();
+    Long longStart = encounter.start;
+    Long longStop = encounter.stop;
 
-    // long seconds = TimeUnit.MILLISECONDS.toSeconds(diff);
-    long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
-
-    // Set information in the Duration object
-    length_of_stay.setCode("m")
-                  .setSystem("http://unitsofmeasure.org")
-                  .setValue(minutes);
-    
-    // Once the Duration object is constructed and defined, create and extension and add this information
-    String url = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/length-of-stay";
-    Extension lengthOfStay = new Extension(url);
-    lengthOfStay.setValue(length_of_stay);
-    encounterResource.addExtension(lengthOfStay);
+    if(longStart != null && longStop != null && status == EncounterStatus.FINISHED) {
+      Date date_start = new Date(encounter.start);
+      Date date_stop = new Date(encounter.stop);
+      long diff = date_stop.getTime() - date_start.getTime();
+  
+      long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+  
+      // Set information in the Duration object
+      length_of_stay.setCode("m")
+                    .setSystem("http://unitsofmeasure.org")
+                    .setValue(minutes);
+      
+      // Once the Duration object is constructed and defined, create and extension and add this information
+      String url = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/length-of-stay";
+      Extension lengthOfStay = new Extension(url);
+      lengthOfStay.setValue(length_of_stay);
+      encounterResource.addExtension(lengthOfStay);
+    } else if (longStart == null) {
+      System.err.println("encounter.start field is NULL");
+    } else if (longStop == null) {
+      System.err.println("encounter.stop field is NULL");
+    } else if (status != EncounterStatus.FINISHED) {
+      System.err.println("encounter.status is not FINISHED");
+    }
 
     if (encounter.reason != null) {
       encounterResource.addReasonCode().addCoding().setCode(encounter.reason.code)
