@@ -776,13 +776,7 @@ public class FhirR4 {
       Extension lengthOfStay = new Extension(url);
       lengthOfStay.setValue(length_of_stay);
       encounterResource.addExtension(lengthOfStay);
-    } else if (longStart == null) {
-      System.err.println("encounter.start field is NULL");
-    } else if (longStop == null) {
-      System.err.println("encounter.stop field is NULL");
-    } else if (status != EncounterStatus.FINISHED) {
-      System.err.println("encounter.status is not FINISHED");
-    }
+    } 
 
     if (encounter.reason != null) {
       encounterResource.addReasonCode().addCoding().setCode(encounter.reason.code)
