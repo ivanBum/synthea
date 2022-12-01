@@ -1467,6 +1467,12 @@ public class FhirR4 {
    * @param encounterEntry The current Encounter entry
    * @param chargeItem     The ChargeItem
    * @return The added Entry
+   * 
+   * Main contents
+   * Satus: 1..1	code - ChargeItemStatus (ex. billable)
+   * Code: 	1..1	CodeableConcept - A code that identifies the charge, like a billing code ChargeItemCode
+   * Subject:	1..1	Reference(Patient | Group)	Individual service was done for/to
+   * Performer - Actor: 	1..1	Reference Individual who was performing
    */
   private static BundleEntryComponent chargeItem(RandomNumberGenerator rand,
           BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
@@ -1483,11 +1489,9 @@ public class FhirR4 {
     } 
     chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
-    System.err.println(personEntry.getId());
+    chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getResource().getId()));
 
-    chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getId()));
-
-    chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getId()));
+    chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getResource().getId()));
 
     // chargeItemResource.addCategory(new CodeableConcept().addCoding(new Coding(
     //       "http://standardhealthrecord.org/shr/condition/vs/ConditionCategoryVS", "disease",
