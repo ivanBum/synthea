@@ -1493,9 +1493,8 @@ public class FhirR4 {
 
     chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getResource().getId()));
 
-    // chargeItemResource.addCategory(new CodeableConcept().addCoding(new Coding(
-    //       "http://standardhealthrecord.org/shr/condition/vs/ConditionCategoryVS", "disease",
-    //       "Disease")));
+    chargeItemResource.setCode(new CodeableConcept()
+                      .addCoding(new Coding("System", "01510", "Some item")));
 
     BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
 
