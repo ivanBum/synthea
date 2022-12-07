@@ -1,16 +1,23 @@
 package org.mitre.synthea.export;
 
-// Add chargeItem resource
-import org.hl7.fhir.r4.model.ChargeItem;
+
+// Duration to set length of stay
+import java.util.concurrent.TimeUnit;
+import org.hl7.fhir.r4.model.Duration;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.gclient.ReferenceClientParam;
+import ca.uhn.fhir.model.dstu2.valueset.EncounterStateEnum;
+
+// Add chargeItem resource
+import org.hl7.fhir.r4.model.ChargeItem;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.oracle.truffle.js.runtime.objects.Null;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -23,8 +30,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.hl7.fhir.dstu3.model.codesystems.EncounterDischargeDisposition;
 import org.hl7.fhir.dstu3.model.codesystems.ChargeitemBillingcodes;
-import org.hl7.fhir.dstu3.model.codesystems.ChargeitemStatus;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.AllergyIntolerance.AllergyIntoleranceCategory;
@@ -178,11 +185,18 @@ public class FhirR4 {
   private static final String DICOM_DCM_URI = "http://dicom.nema.org/resources/ontology/DCM";
   private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
   protected static final String SYNTHEA_IDENTIFIER = "https://github.com/synthetichealth/synthea";
+  public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
+  
+  final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
   @SuppressWarnings("rawtypes")
   private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
   @SuppressWarnings("rawtypes")
   private static final Map languageLookup = loadLanguageLookup();
+
+  // Add Verily extension flag
+  protected static boolean USE_VERILY_EXTENSIONS = 
+      Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   protected static boolean USE_SHR_EXTENSIONS =
       Config.getAsBoolean("exporter.fhir.use_shr_extensions");
@@ -750,10 +764,16 @@ public class FhirR4 {
     classCode.setCode(EncounterType.fromString(encounter.type).code());
     classCode.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
     encounterResource.setClass_(classCode);
+    
     encounterResource
         .setPeriod(new Period()
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
+       
+    if (USE_VERILY_EXTENSIONS) {
+      // Add Length of Stay
+      lengthOfStay(encounterResource, encounter);
+    }
 
     if (encounter.reason != null) {
       encounterResource.addReasonCode().addCoding().setCode(encounter.reason.code)
@@ -1576,7 +1596,6 @@ public class FhirR4 {
    * @param allergy        The Allergy Entry
    * @return The added Entry
    */
-  private static BundleEntryComponent allergy(RandomNumberGenerator rand,
           BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
           HealthRecord.Allergy allergy) {
 
@@ -3278,5 +3297,37 @@ public class FhirR4 {
     } else {
       return "urn:uuid:";
     }
+  }
+ 
+  public static void lengthOfStay(org.hl7.fhir.r4.model.Encounter encounterResource, Encounter encounter) {
+
+    String losExtensionUrl = BASE_VVS_EXTENSION_URL + LENGTH_OF_STAY_SUFFIX;   
+    // Length of Stay 
+    Duration length_of_stay = new Duration();
+    // setValue gets inhereted from Quantity class
+
+    // Check if encounter.start or encounter.stop are null, and if encounter is finished
+    EncounterStatus status = encounterResource.getStatus();
+    Long longStart = encounter.start;
+    Long longStop = encounter.stop;
+
+    if(longStart != null && longStop != null && status == EncounterStatus.FINISHED) {
+      Date date_start = new Date(encounter.start);
+      Date date_stop = new Date(encounter.stop);
+      long diff = date_stop.getTime() - date_start.getTime();
+
+      long minutes = TimeUnit.MILLISECONDS.toMinutes(diff);
+
+      // Set information in the Duration object
+      length_of_stay.setCode("m")
+                    .setSystem("http://unitsofmeasure.org")
+                    .setValue(minutes);
+      
+      // Once the Duration object is constructed and defined, create and extension and add this information
+      String url = losExtensionUrl;
+      Extension lengthOfStay = new Extension(url);
+      lengthOfStay.setValue(length_of_stay);
+      encounterResource.addExtension(lengthOfStay);
+    } 
   }
 }
