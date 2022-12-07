@@ -295,10 +295,12 @@ public class FhirR4 {
       BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
 
       // Add ChargeItem to HealthRecord 
-      
-      for (HealthRecord.Entry chargeItem : person.record.encounters) {
+      /**
+       *for (HealthRecord.Entry chargeItem : person.record.encounters) {
         chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
-      }
+      } 
+       */
+      
       
       for (HealthRecord.Entry condition : encounter.conditions) {
         condition(person, personEntry, bundle, encounterEntry, condition);
@@ -1515,9 +1517,11 @@ public class FhirR4 {
     } 
     chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
-    chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getResource().getId()));
+    // chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getResource().getId()));
+    chargeItemResource.setSubject(new Reference(personEntry.getResource().getId()));
 
-    chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getResource().getId()));
+    // chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getResource().getId()));
+    chargeItemResource.setContext(new Reference(encounterEntry.getResource().getId()));
 
     chargeItemResource.setCode(new CodeableConcept()
                       .addCoding(new Coding("System", "01510", "Some item")));
