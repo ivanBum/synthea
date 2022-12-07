@@ -178,6 +178,9 @@ public class FhirR4 {
   private static final String DICOM_DCM_URI = "http://dicom.nema.org/resources/ontology/DCM";
   private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
   protected static final String SYNTHEA_IDENTIFIER = "https://github.com/synthetichealth/synthea";
+  public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
+  
+  final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
   @SuppressWarnings("rawtypes")
   private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
@@ -753,9 +756,9 @@ public class FhirR4 {
         .setPeriod(new Period()
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
-
+       
     if (USE_VERILY_EXTENSIONS) {
-      // Add Lenght of Stay
+      // Add Length of Stay
       lengthOfStay(encounterResource, encounter);
     }
 
@@ -3238,8 +3241,10 @@ public class FhirR4 {
       return "urn:uuid:";
     }
   }
-
+ 
   public static void lengthOfStay(org.hl7.fhir.r4.model.Encounter encounterResource, Encounter encounter) {
+
+    String losExtensionUrl = BASE_VVS_EXTENSION_URL + LENGTH_OF_STAY_SUFFIX;   
     // Length of Stay 
     Duration length_of_stay = new Duration();
     // setValue gets inhereted from Quantity class
@@ -3262,7 +3267,7 @@ public class FhirR4 {
                     .setValue(minutes);
       
       // Once the Duration object is constructed and defined, create and extension and add this information
-      String url = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/length-of-stay";
+      String url = losExtensionUrl;
       Extension lengthOfStay = new Extension(url);
       lengthOfStay.setValue(length_of_stay);
       encounterResource.addExtension(lengthOfStay);
