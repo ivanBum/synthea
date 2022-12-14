@@ -294,11 +294,6 @@ public class FhirR4 {
 
     for (Encounter encounter : person.record.encounters) {
       BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
-
-      for (HealthRecord.Entry chargeItem : encounter.chargeItem) {
-        System.out.println("ping");
-        chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
-      }
       
       for (HealthRecord.Entry condition : encounter.conditions) {
         condition(person, personEntry, bundle, encounterEntry, condition);
@@ -366,6 +361,9 @@ public class FhirR4 {
 
       explanationOfBenefit(personEntry, bundle, encounterEntry, person,
           encounterClaim, encounter, encounter.claim);
+
+      // one chargeItem per encounter
+      chargeItem(person, personEntry, bundle, encounterEntry, encounter);
     }
 
     if (USE_US_CORE_IG) {
@@ -1503,7 +1501,11 @@ public class FhirR4 {
   private static BundleEntryComponent chargeItem(RandomNumberGenerator rand,
           BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
           HealthRecord.Entry chargeItem) {
+
     ChargeItem chargeItemResource = new ChargeItem();
+
+    final String REVENUE_CODES = "https://www.nubc.org/CodeSystem/RevenueCodes";
+    final String STRUCTURE_DEFINITION = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/enriched-nubc-revenue-codes";
 
     if (USE_US_CORE_IG) {
       // The metadata about a resource. This is content in the resource that is maintained by the infrastructure. 
@@ -1516,13 +1518,31 @@ public class FhirR4 {
     chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
     // chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getResource().getId()));
-    chargeItemResource.setSubject(new Reference(personEntry.getResource().getId()));
-
-    // chargeItemResource.setContext(new Reference("Encounter/" + encounterEntry.getResource().getId()));
-    chargeItemResource.setContext(new Reference(encounterEntry.getResource().getId()));
+    chargeItemResource.setSubject(new Reference(personEntry.getFullUrl()));
+    chargeItemResource.setContext(new Reference(encounterEntry.getFullUrl()));
 
     chargeItemResource.setCode(new CodeableConcept()
                       .addCoding(new Coding("System", "01510", "Some item")));
+
+    Extension full = new Extension(STRUCTURE_DEFINITION);
+
+    Extension mainCode = new Extension("mainCode");
+    Coding valueCodingMainCode = new Coding();
+    valueCodingMainCode.setSystem(REVENUE_CODES);
+    valueCodingMainCode.setCode("0640");
+    mainCode.setValue(valueCodingMainCode);
+    full.addExtension(mainCode);
+
+    Extension enrichedCode = new Extension("enrichedCode");
+    Coding valueCodingEnrichedCode = new Coding();
+    valueCodingEnrichedCode.setSystem(REVENUE_CODES);
+    valueCodingEnrichedCode.setCode("0640");
+    valueCodingEnrichedCode.setVersion("2022-q3-1.0");
+    valueCodingEnrichedCode.setDisplay("RADIOLOGIC EXAM UPR GI TRC DOUBLE CONTRAST STUDY");
+    enrichedCode.setValue(valueCodingEnrichedCode);
+    full.addExtension(enrichedCode);
+    
+    chargeItemResource.addExtension(full);
 
     BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
 
