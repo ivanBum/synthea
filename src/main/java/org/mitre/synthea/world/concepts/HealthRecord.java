@@ -231,6 +231,15 @@ public class HealthRecord implements Serializable {
     }
   }
 
+  public class ChargeItem extends Entry {
+    public List<ChargeItem> chargeItems;
+    
+    public ChargeItem(long time, String type) {
+      super(time, type);
+        this.chargeItems = new ArrayList<ChargeItem>();
+    }
+  }
+
   public class Observation extends Entry {
     public Object value;
     public String category;
@@ -643,6 +652,9 @@ public class HealthRecord implements Serializable {
       devices = new ArrayList<Device>();
       supplies = new ArrayList<Supply>();
       this.claim = new Claim(this, person);
+
+      // Add chargeItem
+      chargeItem = new ArrayList<ChargeItem>();
     }
 
     /**

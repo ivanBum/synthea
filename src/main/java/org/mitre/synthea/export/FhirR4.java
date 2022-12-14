@@ -191,11 +191,12 @@ public class FhirR4 {
   private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
   protected static final String SYNTHEA_IDENTIFIER = "https://github.com/synthetichealth/synthea";
 
+  // Verily Extension URL
   public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
 
   final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
-    // Add Verily extension flag
+  // Add Verily extension flag
   protected static boolean USE_VERILY_EXTENSIONS = 
     Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
@@ -294,12 +295,10 @@ public class FhirR4 {
     for (Encounter encounter : person.record.encounters) {
       BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
 
-      // Add ChargeItem to HealthRecord 
-      /**
-       *for (HealthRecord.Entry chargeItem : person.record.encounters) {
+      for (HealthRecord.Entry chargeItem : encounter.chargeItem) {
+        System.out.println("ping");
         chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
-      } 
-       */
+      }
       
       
       for (HealthRecord.Entry condition : encounter.conditions) {
