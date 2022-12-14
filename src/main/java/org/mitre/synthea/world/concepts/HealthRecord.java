@@ -231,9 +231,13 @@ public class HealthRecord implements Serializable {
     }
   }
 
+  // ChargeItem HealthRecord constructor
   public class ChargeItem extends Entry {
     public List<ChargeItem> chargeItems;
     
+    /**
+     * Constructor for ChargeItem HealthRecord Entry.
+     */
     public ChargeItem(long time, String type) {
       super(time, type);
         this.chargeItems = new ArrayList<ChargeItem>();

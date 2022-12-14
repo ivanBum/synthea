@@ -300,7 +300,6 @@ public class FhirR4 {
         chargeItem(person, personEntry, bundle, encounterEntry, chargeItem);
       }
       
-      
       for (HealthRecord.Entry condition : encounter.conditions) {
         condition(person, personEntry, bundle, encounterEntry, condition);
       }
