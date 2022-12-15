@@ -361,9 +361,11 @@ public class FhirR4 {
 
       explanationOfBenefit(personEntry, bundle, encounterEntry, person,
           encounterClaim, encounter, encounter.claim);
-
+      
+      if (USE_VERILY_EXTENSIONS) {
       // one chargeItem per encounter
       chargeItem(person, personEntry, bundle, encounterEntry, encounter);
+      }
     }
 
     if (USE_US_CORE_IG) {
