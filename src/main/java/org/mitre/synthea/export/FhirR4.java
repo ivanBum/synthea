@@ -2,13 +2,10 @@ package org.mitre.synthea.export;
 
 // Add chargeItem resource
 import org.hl7.fhir.r4.model.ChargeItem;
-import org.hl7.fhir.dstu3.model.codesystems.ChargeitemBillingcodes;
-import org.hl7.fhir.dstu3.model.codesystems.ChargeitemStatus;
 
 // Duration to set length of stay
 import java.util.concurrent.TimeUnit;
 import org.hl7.fhir.r4.model.Duration;
-
 
 import ca.uhn.fhir.model.dstu2.valueset.EncounterStateEnum;
 
@@ -26,7 +23,6 @@ import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.oracle.truffle.js.runtime.objects.Null;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -39,7 +35,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemBillingcodes;
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemStatus;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.AllergyIntolerance.AllergyIntoleranceCategory;
@@ -193,9 +190,6 @@ public class FhirR4 {
   private static final String DICOM_DCM_URI = "http://dicom.nema.org/resources/ontology/DCM";
   private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
   protected static final String SYNTHEA_IDENTIFIER = "https://github.com/synthetichealth/synthea";
-  public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
-  
-  final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
   // Verily Extension URL
   public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
@@ -203,17 +197,13 @@ public class FhirR4 {
   final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
   // Add Verily extension flag
-  protected static boolean USE_VERILY_EXTENSIONS = 
+  protected static boolean USE_VERILY_EXTENSIONS =
     Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   @SuppressWarnings("rawtypes")
   private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
   @SuppressWarnings("rawtypes")
   private static final Map languageLookup = loadLanguageLookup();
-
-  // Add Verily extension flag
-  protected static boolean USE_VERILY_EXTENSIONS = 
-      Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   protected static boolean USE_SHR_EXTENSIONS =
       Config.getAsBoolean("exporter.fhir.use_shr_extensions");
@@ -331,7 +321,7 @@ public class FhirR4 {
         device(person, personEntry, bundle, device);
       }
 
-      for (HealthRecord.Supply supply : encounter.supplies) {
+    for (HealthRecord.Supply supply : encounter.supplies) {
         supplyDelivery(person, personEntry, bundle, supply, encounter);
       }
 
@@ -780,16 +770,10 @@ public class FhirR4 {
     classCode.setCode(EncounterType.fromString(encounter.type).code());
     classCode.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
     encounterResource.setClass_(classCode);
-    
     encounterResource
         .setPeriod(new Period()
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
-       
-    if (USE_VERILY_EXTENSIONS) {
-      // Add Length of Stay
-      lengthOfStay(encounterResource, encounter);
-    }
 
     if (USE_VERILY_EXTENSIONS) {
       // Add Length of Stay
@@ -1522,45 +1506,68 @@ public class FhirR4 {
 
     ChargeItem chargeItemResource = new ChargeItem();
 
+    final String STRUCTURE_DEFINITION = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/verily-charge-item";
+    final String ENRICHED_REVENUE_CODES = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/enriched-nubc-revenue-codes";
+    final String REVENUE_CATEGORY = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/nubc-revenue-category";
+    final String ENRICHED_CPT = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/enriched-cpt";
+    final String ENRICHED_HCPCS = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/enriched-hcpcs";
+    final String ENRICHED_NDC = "";
+    final String TRANSACTION_TYPE = "";
+    final String DETAILED_COST = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/detailed-cost";
+    final String CHARGE_AMOUNT = "";
     final String REVENUE_CODES = "https://www.nubc.org/CodeSystem/RevenueCodes";
-    final String STRUCTURE_DEFINITION = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/enriched-nubc-revenue-codes";
+    final String HCPCS_CODES = "http://terminology.hl7.org/CodeSystem/HCPCS";
 
+          
+    // Profile 
     if (USE_US_CORE_IG) {
       // The metadata about a resource. This is content in the resource that is maintained by the infrastructure. 
       // Changes to the content might not always be associated with version changes to the resource.
       Meta meta = new Meta();
-      meta.addProfile(
-          "http://hl7.org/fhir/us/core/StructureDefinition/us-core-chargeItem");
+      meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition");
       chargeItemResource.setMeta(meta);
     } 
+    
+    // Status 
     chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
-    // chargeItemResource.setSubject(new Reference("Patient/" + personEntry.getResource().getId()));
+    // code
+    chargeItemResource.setCode(new CodeableConcept()
+                      .addCoding(new Coding("System",
+                                            "01510",
+                                            "Some item")));
+
+    // References
     chargeItemResource.setSubject(new Reference(personEntry.getFullUrl()));
     chargeItemResource.setContext(new Reference(encounterEntry.getFullUrl()));
 
-    chargeItemResource.setCode(new CodeableConcept()
-                      .addCoding(new Coding("System", "01510", "Some item")));
+    // enrichedRevenueCode
+    Extension enrichedRevenueCode = codeEnrichment(ENRICHED_REVENUE_CODES, REVENUE_CODES);
+    chargeItemResource.addExtension(enrichedRevenueCode);
 
-    Extension full = new Extension(STRUCTURE_DEFINITION);
+    // enrichedHCPCS
+    Extension enrichedHCPCS = codeEnrichment(ENRICHED_HCPCS, HCPCS_CODES);
+    chargeItemResource.addExtension(enrichedHCPCS);
 
-    Extension mainCode = new Extension("mainCode");
-    Coding valueCodingMainCode = new Coding();
-    valueCodingMainCode.setSystem(REVENUE_CODES);
-    valueCodingMainCode.setCode("0640");
-    mainCode.setValue(valueCodingMainCode);
-    full.addExtension(mainCode);
+    // detailedCost
+    Extension moneyUrl = new Extension(DETAILED_COST);
+    Extension moneyExtension = new Extension("totalCost");
+    Money moneyResource = new Money();
+    moneyResource.setValue(4928.71);
+    moneyResource.setCurrency("USD");
+    moneyExtension.setValue(moneyResource);
+    moneyUrl.addExtension(moneyExtension);
+    chargeItemResource.addExtension(moneyUrl);
 
-    Extension enrichedCode = new Extension("enrichedCode");
-    Coding valueCodingEnrichedCode = new Coding();
-    valueCodingEnrichedCode.setSystem(REVENUE_CODES);
-    valueCodingEnrichedCode.setCode("0640");
-    valueCodingEnrichedCode.setVersion("2022-q3-1.0");
-    valueCodingEnrichedCode.setDisplay("RADIOLOGIC EXAM UPR GI TRC DOUBLE CONTRAST STUDY");
-    enrichedCode.setValue(valueCodingEnrichedCode);
-    full.addExtension(enrichedCode);
-    
-    chargeItemResource.addExtension(full);
+    // revenueCategory
+    Extension revenueCategoryExtension = new Extension(REVENUE_CATEGORY);
+    Coding coding = new Coding();
+        coding.setCode("027X");
+        coding.setDisplay("Medical/Surgical Supplies and Devices");
+        coding.setSystem(REVENUE_CODES);
+        coding.setVersion("2022-q3-1.0");
+    revenueCategoryExtension.setValue(coding);
+    chargeItemResource.addExtension(revenueCategoryExtension);
 
     BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
 
@@ -3376,5 +3383,25 @@ public class FhirR4 {
       lengthOfStay.setValue(length_of_stay);
       encounterResource.addExtension(lengthOfStay);
     } 
+  }
+
+  public static Extension codeEnrichment(String fieldUrl, String codeUrl) {
+    Extension enrichment = new Extension(fieldUrl);
+    Extension mainCode = new Extension("mainCode");
+    Coding valueCodingMainCode = new Coding();
+    valueCodingMainCode.setSystem(codeUrl);
+    valueCodingMainCode.setCode("0640");
+    mainCode.setValue(valueCodingMainCode);
+    enrichment.addExtension(mainCode);
+    Extension enrichedCode = new Extension("enrichedCode");
+    Coding valueCodingEnrichedCode = new Coding();
+    valueCodingEnrichedCode.setSystem(codeUrl);
+    valueCodingEnrichedCode.setCode("0640");
+    valueCodingEnrichedCode.setVersion("2022-q3-1.0");
+    valueCodingEnrichedCode.setDisplay("RADIOLOGIC EXAM UPR GI TRC DOUBLE CONTRAST STUDY");
+    enrichedCode.setValue(valueCodingEnrichedCode);
+    enrichment.addExtension(enrichedCode);
+
+    return enrichment;
   }
 }
