@@ -1,6 +1,5 @@
 package org.mitre.synthea.export;
 
-// Add chargeItem resource
 import org.hl7.fhir.r4.model.ChargeItem;
 
 // Duration to set length of stay
@@ -8,9 +7,6 @@ import java.util.concurrent.TimeUnit;
 import org.hl7.fhir.r4.model.Duration;
 
 import ca.uhn.fhir.model.dstu2.valueset.EncounterStateEnum;
-
-import com.oracle.truffle.js.runtime.objects.Null;
-
 
 import org.hl7.fhir.dstu3.model.codesystems.EncounterDischargeDisposition;
 
@@ -197,7 +193,7 @@ public class FhirR4 {
   final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
   // Add Verily extension flag
-  protected static boolean USE_VERILY_EXTENSIONS =
+  final protected static boolean USE_VERILY_EXTENSIONS =
     Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   @SuppressWarnings("rawtypes")
@@ -363,8 +359,8 @@ public class FhirR4 {
           encounterClaim, encounter, encounter.claim);
       
       if (USE_VERILY_EXTENSIONS) {
-      // one chargeItem per encounter
-      chargeItem(person, personEntry, bundle, encounterEntry, encounter);
+        // one chargeItem per encounter
+        chargeItem(person, personEntry, bundle, encounterEntry, encounter);
       }
     }
 
@@ -1486,7 +1482,9 @@ public class FhirR4 {
 
   /**
    * Map the ChargeItem into a FHIR ChargeItem resource, and add it to the given Bundle.
-   *
+   * 
+   * 
+   * 
    * @param rand           Source of randomness to use when generating ids etc
    * @param personEntry    The Entry for the Person
    * @param bundle         The Bundle to add to
@@ -3385,6 +3383,14 @@ public class FhirR4 {
     } 
   }
 
+  /**
+   * This function creates an enrichment template with "mainCode" and "enrichedCode" and
+   * fills it with the specific URL's regarding the extension in question 
+   * 
+   * @param fieldUrl  CodeSystem terminology of the extension
+   * @param codeUrl   full URL of the field in question, describing its structure     
+   * @return enrichment extension
+   */
   public static Extension codeEnrichment(String fieldUrl, String codeUrl) {
     Extension enrichment = new Extension(fieldUrl);
     Extension mainCode = new Extension("mainCode");
