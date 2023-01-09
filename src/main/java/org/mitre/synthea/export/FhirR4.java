@@ -1,18 +1,24 @@
 package org.mitre.synthea.export;
 
+import org.hl7.fhir.r4.model.ChargeItem;
+
 // Duration to set length of stay
 import java.util.concurrent.TimeUnit;
 import org.hl7.fhir.r4.model.Duration;
 
-import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.model.dstu2.valueset.EncounterStateEnum;
+
+import org.hl7.fhir.dstu3.model.codesystems.EncounterDischargeDisposition;
+
+
+import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.gclient.ReferenceClientParam;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.oracle.truffle.js.runtime.objects.Null;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
@@ -25,7 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.hl7.fhir.dstu3.model.codesystems.EncounterDischargeDisposition;
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemBillingcodes;
+import org.hl7.fhir.dstu3.model.codesystems.ChargeitemStatus;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.AllergyIntolerance.AllergyIntoleranceCategory;
@@ -45,6 +52,7 @@ import org.hl7.fhir.r4.model.CarePlan.CarePlanStatus;
 import org.hl7.fhir.r4.model.CareTeam;
 import org.hl7.fhir.r4.model.CareTeam.CareTeamParticipantComponent;
 import org.hl7.fhir.r4.model.CareTeam.CareTeamStatus;
+import org.hl7.fhir.r4.model.ChargeItem.ChargeItemStatus;
 import org.hl7.fhir.r4.model.Claim.ClaimStatus;
 import org.hl7.fhir.r4.model.Claim.DiagnosisComponent;
 import org.hl7.fhir.r4.model.Claim.InsuranceComponent;
@@ -178,18 +186,20 @@ public class FhirR4 {
   private static final String DICOM_DCM_URI = "http://dicom.nema.org/resources/ontology/DCM";
   private static final String MEDIA_TYPE_URI = "http://terminology.hl7.org/CodeSystem/media-type";
   protected static final String SYNTHEA_IDENTIFIER = "https://github.com/synthetichealth/synthea";
+
+  // Verily Extension URL
   public static final String BASE_VVS_EXTENSION_URL = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/";
-  
+
   final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
+
+  // Add Verily extension flag
+  final protected static boolean USE_VERILY_EXTENSIONS =
+    Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   @SuppressWarnings("rawtypes")
   private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
   @SuppressWarnings("rawtypes")
   private static final Map languageLookup = loadLanguageLookup();
-
-  // Add Verily extension flag
-  protected static boolean USE_VERILY_EXTENSIONS = 
-      Config.getAsBoolean("exporter.fhir.add_verily_extensions");
 
   protected static boolean USE_SHR_EXTENSIONS =
       Config.getAsBoolean("exporter.fhir.use_shr_extensions");
@@ -275,12 +285,12 @@ public class FhirR4 {
     } else {
       bundle.setType(BundleType.COLLECTION);
     }
-
+  
     BundleEntryComponent personEntry = basicInfo(person, bundle, stopTime);
 
     for (Encounter encounter : person.record.encounters) {
       BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
-
+      
       for (HealthRecord.Entry condition : encounter.conditions) {
         condition(person, personEntry, bundle, encounterEntry, condition);
       }
@@ -307,7 +317,7 @@ public class FhirR4 {
         device(person, personEntry, bundle, device);
       }
 
-      for (HealthRecord.Supply supply : encounter.supplies) {
+    for (HealthRecord.Supply supply : encounter.supplies) {
         supplyDelivery(person, personEntry, bundle, supply, encounter);
       }
 
@@ -347,6 +357,11 @@ public class FhirR4 {
 
       explanationOfBenefit(personEntry, bundle, encounterEntry, person,
           encounterClaim, encounter, encounter.claim);
+      
+      if (USE_VERILY_EXTENSIONS) {
+        // one chargeItem per encounter
+        chargeItem(person, personEntry, bundle, encounterEntry, encounter);
+      }
     }
 
     if (USE_US_CORE_IG) {
@@ -751,16 +766,16 @@ public class FhirR4 {
     classCode.setCode(EncounterType.fromString(encounter.type).code());
     classCode.setSystem("http://terminology.hl7.org/CodeSystem/v3-ActCode");
     encounterResource.setClass_(classCode);
-    
     encounterResource
         .setPeriod(new Period()
             .setStart(new Date(encounter.start))
             .setEnd(new Date(encounter.stop)));
-       
+
     if (USE_VERILY_EXTENSIONS) {
       // Add Length of Stay
       lengthOfStay(encounterResource, encounter);
     }
+    
 
     if (encounter.reason != null) {
       encounterResource.addReasonCode().addCoding().setCode(encounter.reason.code)
@@ -1463,6 +1478,101 @@ public class FhirR4 {
         .setAmount(payment));
 
     return newEntry(person, bundle,eob);
+  }
+
+  /**
+   * Map the ChargeItem into a FHIR ChargeItem resource, and add it to the given Bundle.
+   * 
+   * 
+   * 
+   * @param rand           Source of randomness to use when generating ids etc
+   * @param personEntry    The Entry for the Person
+   * @param bundle         The Bundle to add to
+   * @param encounterEntry The current Encounter entry
+   * @param chargeItem     The ChargeItem
+   * @return The added Entry
+   * 
+   * Main contents
+   * Satus: 1..1	code - ChargeItemStatus (ex. billable)
+   * Code: 	1..1	CodeableConcept - A code that identifies the charge, like a billing code ChargeItemCode
+   * Subject:	1..1	Reference(Patient | Group)	Individual service was done for/to
+   * Performer - Actor: 	1..1	Reference Individual who was performing
+   */
+  private static BundleEntryComponent chargeItem(RandomNumberGenerator rand,
+          BundleEntryComponent personEntry, Bundle bundle, BundleEntryComponent encounterEntry,
+          HealthRecord.Entry chargeItem) {
+
+    ChargeItem chargeItemResource = new ChargeItem();
+
+    final String STRUCTURE_DEFINITION = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/verily-charge-item";
+    final String ENRICHED_REVENUE_CODES = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/enriched-nubc-revenue-codes";
+    final String REVENUE_CATEGORY = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/nubc-revenue-category";
+    final String ENRICHED_CPT = "https://verily-src.github.io/verily-fhir-ig/StructureDefinition/enriched-cpt";
+    final String ENRICHED_HCPCS = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/enriched-hcpcs";
+    final String ENRICHED_NDC = "";
+    final String TRANSACTION_TYPE = "";
+    final String DETAILED_COST = "https://verily-src.github.io/vhp-hds-vvs-fhir-ig/StructureDefinition/detailed-cost";
+    final String CHARGE_AMOUNT = "";
+    final String REVENUE_CODES = "https://www.nubc.org/CodeSystem/RevenueCodes";
+    final String HCPCS_CODES = "http://terminology.hl7.org/CodeSystem/HCPCS";
+    final String CHARGE_ACTIVITY_CODE = "https://verily-src.github.io/verily-fhir-ig/CodeSystem/charge-activity-code";
+
+          
+    // Profile 
+    /*if (USE_US_CORE_IG) {
+      // The metadata about a resource. This is content in the resource that is maintained by the infrastructure. 
+      // Changes to the content might not always be associated with version changes to the resource.
+      Meta meta = new Meta();
+      meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-chargeitem");
+      chargeItemResource.setMeta(meta);
+    } */
+    
+    // Status 
+    chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
+
+    // code
+    chargeItemResource.setCode(new CodeableConcept()
+                      .addCoding(new Coding(CHARGE_ACTIVITY_CODE,
+                                            "01510",
+                                            "Some item")));
+
+    // References
+    chargeItemResource.setSubject(new Reference(personEntry.getFullUrl()));
+    chargeItemResource.setContext(new Reference(encounterEntry.getFullUrl()));
+
+    // enrichedRevenueCode
+    Extension enrichedRevenueCode = codeEnrichment(ENRICHED_REVENUE_CODES, REVENUE_CODES);
+    chargeItemResource.addExtension(enrichedRevenueCode);
+
+    // enrichedHCPCS
+    Extension enrichedHCPCS = codeEnrichment(ENRICHED_HCPCS, HCPCS_CODES);
+    chargeItemResource.addExtension(enrichedHCPCS);
+
+    // detailedCost
+    Extension moneyUrl = new Extension(DETAILED_COST);
+    Extension moneyExtension = new Extension("totalCost");
+    Money moneyResource = new Money();
+    moneyResource.setValue(4928.71);
+    moneyResource.setCurrency("USD");
+    moneyExtension.setValue(moneyResource);
+    moneyUrl.addExtension(moneyExtension);
+    chargeItemResource.addExtension(moneyUrl);
+
+    // revenueCategory
+    Extension revenueCategoryExtension = new Extension(REVENUE_CATEGORY);
+    Coding coding = new Coding();
+        coding.setCode("027X");
+        coding.setDisplay("Medical/Surgical Supplies and Devices");
+        coding.setSystem(REVENUE_CODES);
+        coding.setVersion("2022-q3-1.0");
+    revenueCategoryExtension.setValue(coding);
+    chargeItemResource.addExtension(revenueCategoryExtension);
+
+    BundleEntryComponent chargeItemEntry = newEntry(rand, bundle, chargeItemResource);
+
+    chargeItem.fullUrl = chargeItemEntry.getFullUrl();
+
+    return chargeItemEntry;
   }
 
   /**
@@ -3241,7 +3351,7 @@ public class FhirR4 {
       return "urn:uuid:";
     }
   }
- 
+
   public static void lengthOfStay(org.hl7.fhir.r4.model.Encounter encounterResource, Encounter encounter) {
 
     String losExtensionUrl = BASE_VVS_EXTENSION_URL + LENGTH_OF_STAY_SUFFIX;   
@@ -3265,12 +3375,40 @@ public class FhirR4 {
       length_of_stay.setCode("m")
                     .setSystem("http://unitsofmeasure.org")
                     .setValue(minutes);
-      
+
       // Once the Duration object is constructed and defined, create and extension and add this information
       String url = losExtensionUrl;
       Extension lengthOfStay = new Extension(url);
       lengthOfStay.setValue(length_of_stay);
       encounterResource.addExtension(lengthOfStay);
     } 
+  }
+
+  /**
+   * This function creates an enrichment template with "mainCode" and "enrichedCode" and
+   * fills it with the specific URL's regarding the extension in question 
+   * 
+   * @param fieldUrl  CodeSystem terminology of the extension
+   * @param codeUrl   full URL of the field in question, describing its structure     
+   * @return enrichment extension
+   */
+  public static Extension codeEnrichment(String fieldUrl, String codeUrl) {
+    Extension enrichment = new Extension(fieldUrl);
+    Extension mainCode = new Extension("mainCode");
+    Coding valueCodingMainCode = new Coding();
+    valueCodingMainCode.setSystem(codeUrl);
+    valueCodingMainCode.setCode("0640");
+    mainCode.setValue(valueCodingMainCode);
+    enrichment.addExtension(mainCode);
+    Extension enrichedCode = new Extension("enrichedCode");
+    Coding valueCodingEnrichedCode = new Coding();
+    valueCodingEnrichedCode.setSystem(codeUrl);
+    valueCodingEnrichedCode.setCode("0640");
+    valueCodingEnrichedCode.setVersion("2022-q3-1.0");
+    valueCodingEnrichedCode.setDisplay("RADIOLOGIC EXAM UPR GI TRC DOUBLE CONTRAST STUDY");
+    enrichedCode.setValue(valueCodingEnrichedCode);
+    enrichment.addExtension(enrichedCode);
+
+    return enrichment;
   }
 }
