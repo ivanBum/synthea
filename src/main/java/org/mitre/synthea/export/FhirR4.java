@@ -1515,23 +1515,24 @@ public class FhirR4 {
     final String CHARGE_AMOUNT = "";
     final String REVENUE_CODES = "https://www.nubc.org/CodeSystem/RevenueCodes";
     final String HCPCS_CODES = "http://terminology.hl7.org/CodeSystem/HCPCS";
+    final String CHARGE_ACTIVITY_CODE = "https://verily-src.github.io/verily-fhir-ig/CodeSystem/charge-activity-code";
 
           
     // Profile 
-    if (USE_US_CORE_IG) {
+    /*if (USE_US_CORE_IG) {
       // The metadata about a resource. This is content in the resource that is maintained by the infrastructure. 
       // Changes to the content might not always be associated with version changes to the resource.
       Meta meta = new Meta();
-      meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition");
+      meta.addProfile("http://hl7.org/fhir/us/core/StructureDefinition/us-core-chargeitem");
       chargeItemResource.setMeta(meta);
-    } 
+    } */
     
     // Status 
     chargeItemResource.setStatus(ChargeItemStatus.BILLABLE);
 
     // code
     chargeItemResource.setCode(new CodeableConcept()
-                      .addCoding(new Coding("System",
+                      .addCoding(new Coding(CHARGE_ACTIVITY_CODE,
                                             "01510",
                                             "Some item")));
 
