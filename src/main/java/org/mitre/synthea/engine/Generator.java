@@ -262,6 +262,7 @@ public class Generator {
     }
 
     // initialize hospitals
+    reduceNumberOfHospitals();
     Provider.loadProviders(location, this.clinicianRandom);
     // Initialize Payers
     PayerManager.loadPayers(location);
@@ -918,5 +919,10 @@ public class Generator {
    */
   public RandomNumberGenerator getRandomizer() {
     return this.populationRandom;
+  }
+
+  public void reduceNumberOfHospitals() {
+    Integer hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number"));
+    System.out.println(hospitalNumber);
   }
 }
