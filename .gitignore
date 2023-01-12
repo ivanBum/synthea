@@ -44,3 +44,7 @@ src/main/resources/export/hha_rev_cntr_code_map.json
 
 # VS Code plugin files
 .history
+
+
+# Verily
+/sandbox/
