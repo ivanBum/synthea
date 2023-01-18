@@ -3,6 +3,7 @@ package org.mitre.synthea.engine;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.hl7.fhir.utilities.CSVReader;
 import org.mitre.synthea.editors.GrowthDataErrorsEditor;
 import org.mitre.synthea.export.CDWExporter;
 import org.mitre.synthea.export.Exporter;
@@ -262,7 +264,9 @@ public class Generator {
     }
 
     // initialize hospitals
-    reduceNumberOfHospitals();
+    try {
+      reduceNumberOfHospitals();
+    } catch (IOException e) {}
     Provider.loadProviders(location, this.clinicianRandom);
     // Initialize Payers
     PayerManager.loadPayers(location);
@@ -921,8 +925,13 @@ public class Generator {
     return this.populationRandom;
   }
 
-  public void reduceNumberOfHospitals() {
+  public void reduceNumberOfHospitals() throws IOException {
     Integer hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number"));
     System.out.println(hospitalNumber);
+
+    String hospitalFile = Config.get("generate.providers.hospitals.default_file");
+
+    String resource = Utilities.readResource(hospitalFile);
+    System.out.println(resource);
   }
 }
