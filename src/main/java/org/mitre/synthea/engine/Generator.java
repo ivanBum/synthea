@@ -1,5 +1,12 @@
 package org.mitre.synthea.engine;
 
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
+import java.io.Reader;
+import java.io.FileWriter;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -50,6 +57,9 @@ import org.mitre.synthea.world.concepts.Costs;
 import org.mitre.synthea.world.concepts.VitalSign;
 import org.mitre.synthea.world.geography.Demographics;
 import org.mitre.synthea.world.geography.Location;
+
+import com.fasterxml.jackson.dataformat.csv.CsvParser;
+import com.jayway.jsonpath.internal.function.text.Length;
 
 /**
  * Generator creates a population by running the generic modules each timestep
@@ -926,12 +936,33 @@ public class Generator {
   }
 
   public void reduceNumberOfHospitals() throws IOException {
-    Integer hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number"));
-    System.out.println(hospitalNumber);
+    // +1 Since this includes the header
+    int hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number")) + 1;
+    String hospitalFile = "src/main/resources/" + Config.get("generate.providers.hospitals.default_file");
 
-    String hospitalFile = Config.get("generate.providers.hospitals.default_file");
+    String filename = new File(hospitalFile).getAbsolutePath();
+    File csvFile = new File("example.csv");
+    CSVPrinter csvFilePrinter = null;
+    CSVFormat csvFileFormat = CSVFormat.EXCEL;
+    
+    try {
+      CSVParser csvParser = new CSVParser(new FileReader(filename), CSVFormat.DEFAULT); 
+      FileWriter fileWriter = new FileWriter(csvFile);
+      
+      List<CSVRecord> csvRecords = csvParser.getRecords();
 
-    String resource = Utilities.readResource(hospitalFile);
-    System.out.println(resource);
+      csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);
+      // csvFilePrinter.printRecords(csvParser.getRecords());
+      for (int i=0; i<hospitalNumber; i++) {
+        csvFilePrinter.printRecord(csvRecords.get(i));
+      }
+      
+      fileWriter.flush();
+      fileWriter.close();
+      csvFilePrinter.close();
+    } catch(Exception e) {
+      //  
+      System.out.println("Error: No file found in " + filename);
+    }
   }
 }
