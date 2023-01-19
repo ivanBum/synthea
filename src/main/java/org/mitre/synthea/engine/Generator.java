@@ -939,12 +939,12 @@ public class Generator {
     // +1 Since this includes the header
     int hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number")) + 1;
     String hospitalFile = "src/main/resources/" + Config.get("generate.providers.hospitals.default_file");
-
     String filename = new File(hospitalFile).getAbsolutePath();
-    File csvFile = new File("example.csv");
+
+    String reducedCSVFile = "src/main/resources/providers/hospitals_verily_reduced.csv";
+    File csvFile = new File(reducedCSVFile);
     CSVPrinter csvFilePrinter = null;
     CSVFormat csvFileFormat = CSVFormat.EXCEL;
-    
     try {
       CSVParser csvParser = new CSVParser(new FileReader(filename), CSVFormat.DEFAULT); 
       FileWriter fileWriter = new FileWriter(csvFile);
