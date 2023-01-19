@@ -274,9 +274,8 @@ public class Generator {
     }
 
     // initialize hospitals
-    try {
-      reduceNumberOfHospitals();
-    } catch (IOException e) {}
+    reduceNumberOfHospitals();
+
     Provider.loadProviders(location, this.clinicianRandom);
     // Initialize Payers
     PayerManager.loadPayers(location);
@@ -935,34 +934,58 @@ public class Generator {
     return this.populationRandom;
   }
 
-  public void reduceNumberOfHospitals() throws IOException {
+  public void reduceNumberOfHospitals() {
     // +1 Since this includes the header
     int hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number")) + 1;
-    String hospitalFile = "src/main/resources/" + Config.get("generate.providers.hospitals.default_file");
-    String filename = new File(hospitalFile).getAbsolutePath();
 
-    String reducedCSVFile = "src/main/resources/providers/hospitals_verily_reduced.csv";
-    File csvFile = new File(reducedCSVFile);
-    CSVPrinter csvFilePrinter = null;
     CSVFormat csvFileFormat = CSVFormat.EXCEL;
+
+    // Verily CSV
+    String verilyFile = "src/main/resources/providers/hospitals_verily.csv";
+    File csvFile = new File(verilyFile);
+    if (!(csvFile.exists() && !csvFile.isDirectory())) {
+      System.out.println("ERROR: File " + verilyFile + "Does not exists.\n");
+      return;
+    }
+
+    // Verily Reduced CSV
+    String hospitalFile = "src/main/resources/" + Config.get("generate.providers.hospitals.default_file");
+    String verilyReducedFile = new File(hospitalFile).getAbsolutePath();
+    File reducedCSVFile = new File(verilyReducedFile);
+    if (!(reducedCSVFile.exists() && !reducedCSVFile.isDirectory())) {
+      System.out.println("ERROR: File " + verilyReducedFile + " Does not exists.\n");
+      try {
+        CSVParser csvParser = new CSVParser(new FileReader(csvFile), CSVFormat.DEFAULT); 
+        FileWriter fileWriter = new FileWriter(verilyReducedFile);
+        CSVPrinter csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);
+
+        csvFilePrinter.printRecords(csvParser.getRecords());
+
+        fileWriter.flush();
+        fileWriter.close();
+        csvFilePrinter.close();
+        System.out.println("No VerilyReducedCSV found; creating file\n");
+      } catch (Exception e) {
+        System.out.println("ERROR: Cannot write file " + verilyReducedFile);
+      }
+    }
+
     try {
-      CSVParser csvParser = new CSVParser(new FileReader(filename), CSVFormat.DEFAULT); 
-      FileWriter fileWriter = new FileWriter(csvFile);
+      CSVParser csvParser = new CSVParser(new FileReader(csvFile), CSVFormat.DEFAULT); 
+      FileWriter fileWriter = new FileWriter(reducedCSVFile);
       
       List<CSVRecord> csvRecords = csvParser.getRecords();
-
-      csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);
-      // csvFilePrinter.printRecords(csvParser.getRecords());
-      for (int i=0; i<hospitalNumber; i++) {
-        csvFilePrinter.printRecord(csvRecords.get(i));
+      if (csvRecords.size()>=hospitalNumber) {
+        CSVPrinter csvFilePrinter = new CSVPrinter(fileWriter, csvFileFormat);
+        for (int i=0; i<hospitalNumber; i++) {
+          csvFilePrinter.printRecord(csvRecords.get(i));
+        }
+        csvFilePrinter.close();        
+      } else {
+        System.out.println("ERROR: Number of hospitals asked is too big. Default to last size");
       }
-      
       fileWriter.flush();
       fileWriter.close();
-      csvFilePrinter.close();
-    } catch(Exception e) {
-      //  
-      System.out.println("Error: No file found in " + filename);
-    }
+    } catch(Exception e) {}
   }
 }
