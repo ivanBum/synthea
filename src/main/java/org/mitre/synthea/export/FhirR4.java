@@ -192,7 +192,7 @@ public class FhirR4 {
 
   final static String LENGTH_OF_STAY_SUFFIX = "length-of-stay";
 
-  // Add Verily flags
+  // --- ADD VERILY FLAGS
   final protected static boolean USE_VERILY_EXTENSIONS =
     Config.getAsBoolean("exporter.fhir.add_verily_extensions");
   // Resource flags
@@ -204,7 +204,7 @@ public class FhirR4 {
     Config.getAsBoolean("exporter.fhir.observation"); 
   final protected static boolean USE_VERILY_PROCEDURE_FLAG = 
     Config.getAsBoolean("exporter.fhir.procedure"); 
-    final protected static boolean USE_VERILY_DEVICE_FLAG = 
+  final protected static boolean USE_VERILY_DEVICE_FLAG = 
     Config.getAsBoolean("exporter.fhir.device"); 
   final protected static boolean USE_VERILY_SUPPLYDELIVERY_FLAG = 
     Config.getAsBoolean("exporter.fhir.supplyDelivery"); 
@@ -271,7 +271,6 @@ public class FhirR4 {
       throw new ExceptionInInitializerError(e);
     }
   }
-
 
   private static Table<String, String, String> loadMapping(String filename) {
     Table<String, String, String> mappingTable = HashBasedTable.create();

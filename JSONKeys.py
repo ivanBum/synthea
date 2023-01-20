@@ -7,9 +7,9 @@ with open(filename, 'r') as f:
 
 data=json.loads(str1)
 
-c = Counter(k[:] for d in data for k, v in d.items() if k.startswith('resourceType'))
-#c now has the count. Below it will check if count is 0 or not and print.
-if c['resourceType']>0:
-    print("There are",c['resourceType'],"failed cases")
-else:
-    print("test case passed sucessfully")
+vals = {}                       # A dictonary to store how often each value occurs.
+for i in data.values():
+  for j in set(i):              # Convert to a set to remove duplicates
+    vals[j] = 1 + vals.get(j,0) # If we've seen this value iterate the count
+                                # Otherwise we get the default of 0 and iterate it
+print(vals)
