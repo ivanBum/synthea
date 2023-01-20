@@ -214,12 +214,16 @@ public class FhirR4 {
     Config.getAsBoolean("exporter.fhir.immunization");  
   final protected static boolean USE_VERILY_REPORT_FLAG = 
     Config.getAsBoolean("exporter.fhir.report"); 
-  final protected static boolean USE_VERILY_CARETEAM_FLAG = 
-    Config.getAsBoolean("exporter.fhir.caretea"); 
+  final protected static boolean USE_VERILY_CAREPLAN_FLAG = 
+    Config.getAsBoolean("exporter.fhir.carePlan"); 
   final protected static boolean USE_VERILY_IMAGINGSTUDY_FLAG = 
     Config.getAsBoolean("exporter.fhir.imagingStudy");  
   final protected static boolean USE_VERILY_CLAIM_FLAG = 
     Config.getAsBoolean("exporter.fhir.claim"); 
+  final protected static boolean USE_VERILY_CHARGEITEM_FLAG =
+    Config.getAsBoolean("exporter.fhir.chargeItem");
+  final protected static boolean USE_VERILY_DOCUMENTREFERENCE_FLAG =
+    Config.getAsBoolean("exporter.fhir.documentReference");  
 
   @SuppressWarnings("rawtypes")
   private static final Map raceEthnicityCodes = loadRaceEthnicityCodes();
@@ -328,7 +332,7 @@ public class FhirR4 {
         }
       }
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_OBSERVATION_FLAG) {
         for (Observation observation : encounter.observations) {
           // If the Observation contains an attachment, use a Media resource, since
           // Observation resources in v4 don't support Attachments
@@ -340,46 +344,46 @@ public class FhirR4 {
         }
       }
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_PROCEDURE_FLAG) {
         for (Procedure procedure : encounter.procedures) {
           procedure(person, personEntry, bundle, encounterEntry, procedure);
         }
       }
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_DEVICE_FLAG) {
         for (HealthRecord.Device device : encounter.devices) {
           device(person, personEntry, bundle, device);
         }
   
       }
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_SUPPLYDELIVERY_FLAG) {
         for (HealthRecord.Supply supply : encounter.supplies) {
           supplyDelivery(person, personEntry, bundle, supply, encounter);
         } 
       }    
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_MEDICATIONREQUEST_FLAG) {
         for (Medication medication : encounter.medications) {
           medicationRequest(person, personEntry, bundle, encounterEntry, encounter, medication);
         }
       }
 
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_IMMUNIZATION_FLAG) {
         for (HealthRecord.Entry immunization : encounter.immunizations) {
           immunization(person, personEntry, bundle, encounterEntry, immunization);
         }
       }
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_REPORT_FLAG) {
         for (Report report : encounter.reports) {
           report(person, personEntry, bundle, encounterEntry, report);
         }
       }
 
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_CAREPLAN_FLAG) {
         for (CarePlan careplan : encounter.careplans) {
           BundleEntryComponent careTeamEntry =
                   careTeam(person, personEntry, bundle, encounterEntry, careplan);
@@ -389,18 +393,19 @@ public class FhirR4 {
       }
 
 
-      if (USE_VERILY_ALLERGY_FLAG) {
+      if (USE_VERILY_IMAGINGSTUDY_FLAG) {
         for (ImagingStudy imagingStudy : encounter.imagingStudies) {
           imagingStudy(person, personEntry, bundle, encounterEntry, imagingStudy);
         }
   
       }
-
-      if (USE_US_CORE_IG) {
-        String clinicalNoteText = ClinicalNoteExporter.export(person, encounter);
-        boolean lastNote =
-            (encounter == person.record.encounters.get(person.record.encounters.size() - 1));
-        clinicalNote(person, personEntry, bundle, encounterEntry, clinicalNoteText, lastNote);
+      if (USE_VERILY_DOCUMENTREFERENCE_FLAG) {
+        if (USE_US_CORE_IG) {
+          String clinicalNoteText = ClinicalNoteExporter.export(person, encounter);
+          boolean lastNote =
+              (encounter == person.record.encounters.get(person.record.encounters.size() - 1));
+          clinicalNote(person, personEntry, bundle, encounterEntry, clinicalNoteText, lastNote);
+        }
       }
       
       if (USE_VERILY_CLAIM_FLAG) {
@@ -413,8 +418,10 @@ public class FhirR4 {
       }
       
       if (USE_VERILY_EXTENSIONS) {
-        // one chargeItem per encounter
-        chargeItem(person, personEntry, bundle, encounterEntry, encounter);
+        if (USE_VERILY_CHARGEITEM_FLAG) {
+          // one chargeItem per encounter
+          chargeItem(person, personEntry, bundle, encounterEntry, encounter);
+        }
       }
     }
 
