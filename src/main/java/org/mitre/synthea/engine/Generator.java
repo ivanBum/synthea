@@ -1046,17 +1046,18 @@ public class Generator {
     // Verily CSV
     String verilyFile = "src/main/resources/providers/hospitals_verily.csv";
     File csvFile = new File(verilyFile);
-    if (!(csvFile.exists() && !csvFile.isDirectory())) {
-      System.out.println("ERROR: File " + verilyFile + "Does not exists.\n");
-      return;
-    }
+    try {
+      if (!(csvFile.exists() && !csvFile.isDirectory())) {
+        System.out.println("ERROR: File " + verilyFile + "Does not exists.\n");
+      }        
+    } catch (Exception e) {}
 
     // Verily Reduced CSV
     String hospitalFile = "src/main/resources/" + Config.get("generate.providers.hospitals.default_file");
     String verilyReducedFile = new File(hospitalFile).getAbsolutePath();
     File reducedCSVFile = new File(verilyReducedFile);
     if (!(reducedCSVFile.exists() && !reducedCSVFile.isDirectory())) {
-      System.out.println("ERROR: File " + verilyReducedFile + " Does not exists.\n");
+      System.out.println("Warning: File " + verilyReducedFile + " Does not exists.\n");
       try {
         CSVParser csvParser = new CSVParser(new FileReader(csvFile), CSVFormat.DEFAULT); 
         FileWriter fileWriter = new FileWriter(verilyReducedFile);
@@ -1067,7 +1068,7 @@ public class Generator {
         fileWriter.flush();
         fileWriter.close();
         csvFilePrinter.close();
-        System.out.println("No VerilyReducedCSV found; creating file\n");
+        System.out.println("No VerilyReducedCSV found; created file\n");
       } catch (Exception e) {
         System.out.println("ERROR: Cannot create new file " + verilyReducedFile);
       }
