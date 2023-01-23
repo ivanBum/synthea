@@ -1,5 +1,8 @@
 package org.mitre.synthea.world.concepts;
 
+// Add chargeItem resource
+import org.hl7.fhir.r4.model.ChargeItem;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -225,6 +228,19 @@ public class HealthRecord implements Serializable {
      */
     public boolean containsReason(String code, String system) {
       return this.reasons.stream().anyMatch(c -> code.equals(c.code) && system.equals(c.system));
+    }
+  }
+
+  // ChargeItem HealthRecord constructor
+  public class ChargeItem extends Entry {
+    public List<ChargeItem> chargeItems;
+    
+    /**
+     * Constructor for ChargeItem HealthRecord Entry.
+     */
+    public ChargeItem(long time, String type) {
+      super(time, type);
+        this.chargeItems = new ArrayList<ChargeItem>();
     }
   }
 
@@ -587,6 +603,7 @@ public class HealthRecord implements Serializable {
   }
 
   public class Encounter extends Entry {
+    public List<ChargeItem> chargeItem;
     public List<Observation> observations;
     public List<Report> reports;
     public List<Entry> conditions;
@@ -639,6 +656,9 @@ public class HealthRecord implements Serializable {
       devices = new ArrayList<Device>();
       supplies = new ArrayList<Supply>();
       this.claim = new Claim(this, person);
+
+      // Add chargeItem
+      chargeItem = new ArrayList<ChargeItem>();
     }
 
     /**
