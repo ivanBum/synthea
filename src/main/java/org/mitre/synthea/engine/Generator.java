@@ -275,8 +275,7 @@ public class Generator {
 
     // initialize hospitals
     if (Config.getAsBoolean("verily.choose_hospitals") == true) {
-      int numberOfHospitals = 2;
-      chooseHospitals(numberOfHospitals);
+      chooseHospitals();
     } else {
       reduceNumberOfHospitals();
     }
@@ -939,13 +938,33 @@ public class Generator {
     return this.populationRandom;
   }
 
+  /**
+   * Reduces the number of hospitals to "n" by synthea.properties flag.
+   * ./run_synthea --verily.limit_hospital_number 4
+   * 
+   * The reduceNumberOfHospitals() method takes the verily.limit_hospital_number configuration (in the synthea.properties
+   * file) and reduces the csv to that ammount, starting from the first line. This means that, if you plug a
+   * value of 4 (verily.limit_hospital_number = 4), the program will only utilize the first 4 hospital rows
+   * of the hospitals_verily.csv.
+   * It's important to take into account that Synthea uses a proximity detector in order to generate patients;
+   * this means that, if you choose to generate patients from a certain area (lets say Connecticut) you should
+   * only select hospitals that reside in that area. By default this area is Massachusetts, so the hospitals_verily.csv
+   * only has Massachussetts data. You you would want to use other area, you must first change synthea area 
+   * generation and then change the hospitals_verily file
+   * The csv distribution works like this
+   * src/main/resources/providers/ ->
+   * /hospitals.csv => original full set of hospitals
+   * /hospitals_verily.csv => list only containing Massachussetts hospitals. 
+   * /hospitals_verily_reduced.csv => list of "n" hospitals by input(by default Synthea loads this one to 
+   *                                  generate patients)
+   */
   private void reduceNumberOfHospitals() {
     /*  
     * If no reducedCSV is already instanced, program will break with terminal output indicating that
     * the CSV is created. If this happens, second run should work correctly
     */
     // +1 Since this includes the header
-    int hospitalNumber = Integer.parseInt(Config.get("verily.limit_hospital_number")) + 1;
+    int hospitalNumber =Config.getAsInteger("verily.limit_hospital_number") + 1;
 
     CSVFormat csvFileFormat = CSVFormat.EXCEL;
 
@@ -1002,17 +1021,25 @@ public class Generator {
     }
   }
 
-  private void chooseHospitals(int numberOfHospitals) {
+  /**
+   * Selects which hospitals to use in patient generation by name.
+   * 
+   * Hospitals are constant and chosen via code in the method (not by flag or config). If you add more hospitals,
+   * you'll need to change the NUMBER_OF_HOSPITALS variable to reflect the same ammount. 
+   * If no hospital is included in the original hospitals_verily.csv file, program will break; at least one hospital 
+   * must be included.
+   * It is recommended to read javadoc of reduceNumberOfHospitals() method (in Generator.java) to complement this one.
+   */
+  private void chooseHospitals() {
     /*  
     * If no reducedCSV is already instanced, program will break with terminal output indicating that
     * the CSV is created. If this happens, second run should work correctly
     */
-
     String HOSPITAL_1 = "LEMUEL SHATTUCK HOSPITAL";
     String HOSPITAL_2 = "WESTERN MASSACHUSETTS HOSPITAL";
     String HOSPITAL_3 = "WHITTIER REHABILITATION HOSPITAL - BRADFORD";
     String HOSPITAL_4 = "NEW ENGLAND SINAI HOSPITAL";
-    int NUMBER_OF_HOSPITALS = numberOfHospitals;
+    int NUMBER_OF_HOSPITALS = 4;
 
     CSVFormat csvFileFormat = CSVFormat.EXCEL;
 
