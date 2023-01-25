@@ -427,12 +427,12 @@ public class FhirR4 {
         }
       }
 
-      if(USE_VERILY_PROVENANCE_FLAG) {
-        if (USE_US_CORE_IG) {
-          // Add Provenance to the Bundle
-          provenance(bundle, person, stopTime);
+        if(USE_VERILY_PROVENANCE_FLAG) {
+          if (USE_US_CORE_IG) {
+            // Add Provenance to the Bundle
+            provenance(bundle, person, stopTime);
+          }
         }
-      }
       }
     }
     return bundle;
