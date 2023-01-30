@@ -322,7 +322,6 @@ public class FhirR4 {
     
     if (USE_VERILY_ENCOUNTER_FLAG) {
       for (Encounter encounter : person.record.encounters) {
-        if (USE_VERILY_ENCOUNTER_FLAG) {
           BundleEntryComponent encounterEntry = encounter(person, personEntry, bundle, encounter);
 
         if (USE_VERILY_CONDITION_FLAG) {
@@ -426,17 +425,17 @@ public class FhirR4 {
           }
         }
       }
-
-        if(USE_VERILY_PROVENANCE_FLAG) {
-          if (USE_US_CORE_IG) {
-            // Add Provenance to the Bundle
-            provenance(bundle, person, stopTime);
-          }
+      if(USE_VERILY_PROVENANCE_FLAG) {
+        if (USE_US_CORE_IG) {
+          // Add Provenance to the Bundle
+          provenance(bundle, person, stopTime);
         }
       }
     }
+
     return bundle;
   }
+    
 
   /**
    * Convert the given Person into a JSON String, containing a FHIR Bundle of the Person and the
