@@ -981,7 +981,7 @@ public class Generator {
     String verilyReducedFile = new File(hospitalFile).getAbsolutePath();
     File reducedCSVFile = new File(verilyReducedFile);
     if (!(reducedCSVFile.exists() && !reducedCSVFile.isDirectory())) {
-      System.out.println("ERROR: File " + verilyReducedFile + " Does not exists.\n");
+      System.out.println("Warning: File " + verilyReducedFile + " Does not exists.\n");
       try {
         CSVParser csvParser = new CSVParser(new FileReader(csvFile), CSVFormat.DEFAULT); 
         FileWriter fileWriter = new FileWriter(verilyReducedFile);
@@ -992,7 +992,7 @@ public class Generator {
         fileWriter.flush();
         fileWriter.close();
         csvFilePrinter.close();
-        System.out.println("No VerilyReducedCSV found; creating file\n");
+        System.out.println("Creating VerilyReducedCSV file\n");
       } catch (Exception e) {
         System.out.println("ERROR: Cannot create new file " + verilyReducedFile);
       }
